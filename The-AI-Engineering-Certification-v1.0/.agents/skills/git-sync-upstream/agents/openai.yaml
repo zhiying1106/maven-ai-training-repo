@@ -1,0 +1,4 @@
+interface:
+  display_name: "Git Sync Upstream"
+  short_description: "Set up upstream remotes and pull course updates"
+  default_prompt: "Use $git-sync-upstream to configure my upstream remote and safely pull the latest course changes."
