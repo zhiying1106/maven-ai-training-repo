@@ -139,3 +139,41 @@ async def checkout() -> dict:
         "total": cart["total"],
         "message": f"Order {order_id} confirmed! Thanks {username}, your cats will love their new goodies!",
     }
+
+# new tool
+@mcp.tool()
+async def update_cart_quantity(product_id: int, quantity: int) -> dict:
+    """Set the quantity for an item in your cart. Use 0 to remove it."""
+    username = await _get_username()
+    db = await oauth_provider._get_db()
+
+    if quantity < 0:
+        return {"error": "Quantity must be zero or greater"}
+
+    cursor = await db.execute("SELECT name FROM products WHERE id = ?", (product_id,))
+    product = await cursor.fetchone()
+    if product is None:
+        return {"error": "Product not found"}
+
+    if quantity == 0:
+        cursor = await db.execute(
+            "DELETE FROM cart_items WHERE username = ? AND product_id = ?",
+            (username, product_id),
+        )
+        await db.commit()
+        if cursor.rowcount == 0:
+            return {"error": "Item not in cart"}
+        return {"success": True, "message": f"Removed {product[0]} from your cart"}
+
+    await db.execute(
+        """INSERT INTO cart_items (username, product_id, quantity)
+           VALUES (?, ?, ?)
+           ON CONFLICT(username, product_id)
+           DO UPDATE SET quantity = excluded.quantity""",
+        (username, product_id, quantity),
+    )
+    await db.commit()
+    return {
+        "success": True,
+        "message": f"Updated {product[0]} quantity to {quantity}",
+    }
