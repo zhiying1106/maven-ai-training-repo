@@ -155,7 +155,11 @@ Why is OAuth important for MCP servers, and what security considerations should 
 
 #### Answer
 
-_(insert your answer here)_
+- OAuth lets MCP servers securely authenticate and authorize AI clients without sharing user passwords, using access tokens with defined permissions.
+- It enables fine-grained access control, so AI clients only receive the minimum permissions needed (least privilege), reducing the impact of compromised credentials.
+- OAuth supports secure token expiration and revocation, allowing administrators to quickly remove access if a token is leaked or no longer needed.
+- When exposing tools to AI clients, validate all inputs, enforce permission checks on every request, and avoid exposing sensitive or high-risk operations unless necessary.
+- Protect user data by using encrypted connections (HTTPS), securely storing tokens, logging tool usage for auditing, and preventing unauthorized access or prompt injection from triggering privileged actions.
 
 ### Question #2
 
@@ -163,7 +167,10 @@ What is Streamable HTTP transport in MCP, and why might you expose a server publ
 
 #### Answer
 
-_(insert your answer here)_
+- Streamable HTTP transport allows MCP clients and servers to communicate over HTTP, enabling remote access, streaming responses, and integration across different machines or cloud services.
+- A local stdio connection is limited to processes running on the same device, making it suitable for local development but not for remote or multi-user access.
+- Exposing an MCP server publicly with OAuth enables secure authentication and authorization, allowing trusted users or AI clients to access the server over the internet without sharing credentials.
+- A public HTTP server with OAuth is better for production use because it supports remote access, scalable deployments, and secure, permission-based access control while protecting sensitive tools and data.
 
 ## Activity 1: Extend the MCP Server
 
