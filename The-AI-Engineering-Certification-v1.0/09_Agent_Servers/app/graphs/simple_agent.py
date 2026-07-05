@@ -44,6 +44,27 @@ agent = create_agent(
     system_prompt=SYSTEM_PROMPT,
 )
 
+
+def _coerce_text(value: object) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        parts: list[str] = []
+        for block in value:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict):
+                text = block.get("text") or block.get("content")
+                if isinstance(text, str):
+                    parts.append(text)
+            elif getattr(block, "text", None) is not None:
+                parts.append(str(block.text))
+        return "".join(parts)
+    if value is None:
+        return ""
+    return str(value)
+
+
 def retrieve_node(state: AgentState):
     """Run the agent."""
 
@@ -60,13 +81,13 @@ def retrieve_node(state: AgentState):
 def judge_node(state: AgentState):
     """Judge whether the latest response is helpful."""
 
-    answer = state["messages"][-1].content
+    answer = _coerce_text(getattr(state["messages"][-1], "content", ""))
 
     result = judge_model.invoke(
         JUDGE_PROMPT.format(answer=answer)
     )
 
-    decision = result.content.strip().upper()
+    decision = _coerce_text(result.content).strip().upper()
 
     return {
         "helpful": decision == "APPROVE"
