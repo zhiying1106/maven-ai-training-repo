@@ -19,7 +19,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { getMessageText, toolLabel } from "@/lib/messages";
+import { getMessageText, shouldDisplayMessage, toolLabel } from "@/lib/messages";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 
@@ -40,6 +40,7 @@ function toolIcon(name?: string) {
 export function Chat({ assistantId }: { assistantId: string }) {
   const stream = useStream({ apiUrl: API_URL, assistantId });
   const { messages, isLoading, error } = stream;
+  const visibleMessages = messages.filter(shouldDisplayMessage);
 
   const [input, setInput] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
@@ -90,7 +91,7 @@ export function Chat({ assistantId }: { assistantId: string }) {
             </div>
           )}
 
-          {messages.map((message, i) => (
+          {visibleMessages.map((message, i) => (
             <MessageRow key={message.id ?? i} message={message} />
           ))}
 
