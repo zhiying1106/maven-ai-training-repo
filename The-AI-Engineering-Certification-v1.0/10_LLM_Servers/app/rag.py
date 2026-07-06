@@ -15,6 +15,7 @@ from functools import lru_cache
 from typing import Annotated, TypedDict
 
 import tiktoken
+from dotenv import load_dotenv
 from langchain_community.document_loaders import DirectoryLoader, PyMuPDFLoader
 from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
@@ -24,6 +25,8 @@ from langchain_openai import ChatOpenAI
 from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from langgraph.graph import START, StateGraph
+
+load_dotenv()
 
 
 def _tiktoken_len(text: str) -> int:
@@ -38,6 +41,21 @@ class _RAGState(TypedDict):
     question: str
     context: list[Document]
     response: str
+
+
+def _build_fallback_graph() -> object:
+    """Return a simple graph that gracefully answers without RAG context."""
+
+    def retrieve(state: _RAGState) -> _RAGState:
+        return {"context": []}  # type: ignore
+
+    def generate(state: _RAGState) -> _RAGState:
+        return {"response": "I don't know."}  # type: ignore
+
+    graph_builder = StateGraph(_RAGState)
+    graph_builder = graph_builder.add_sequence([retrieve, generate])
+    graph_builder.add_edge(START, "retrieve")
+    return graph_builder.compile()
 
 
 def _build_rag_graph(data_dir: str):
@@ -67,20 +85,30 @@ def _build_rag_graph(data_dir: str):
     )
     chunks = text_splitter.split_documents(documents) if documents else []
 
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key or not chunks:
+        return _build_fallback_graph()
+
     # Embeddings and vector store (in-memory Qdrant)
-    embedding_model = OpenAIEmbeddings(
-        model=os.environ.get("FIREWORKS_EMBEDDING_MODEL", "accounts/fireworks/models/qwen3-embedding-8b"),
-        openai_api_key=os.environ["FIREWORKS_API_KEY"],
-        openai_api_base="https://api.fireworks.ai/inference/v1",
-        check_embedding_ctx_length=False,
-        dimensions=4096,
-    )
-    qdrant_vectorstore = QdrantVectorStore.from_documents(
-        documents=chunks,
-        embedding=embedding_model,
-        location=":memory:",
-        collection_name="rag_collection",
-    )
+    try:
+        embedding_kwargs = {
+            "model": os.environ.get(
+                "GROQ_EMBEDDING_MODEL",
+                "text-embedding-3-small",
+            ),
+            "openai_api_key": api_key,
+            "openai_api_base": "https://api.groq.com/openai/v1",
+            "check_embedding_ctx_length": False,
+        }
+        embedding_model = OpenAIEmbeddings(**embedding_kwargs)
+        qdrant_vectorstore = QdrantVectorStore.from_documents(
+            documents=chunks,
+            embedding=embedding_model,
+            location=":memory:",
+            collection_name="rag_collection",
+        )
+    except Exception:
+        return _build_fallback_graph()
     retriever = qdrant_vectorstore.as_retriever()
 
     # Prompt and model
@@ -91,9 +119,9 @@ def _build_rag_graph(data_dir: str):
     )
     chat_prompt = ChatPromptTemplate.from_messages([("human", human_template)])
     generator_llm = ChatOpenAI(
-        model=os.environ.get("FIREWORKS_CHAT_MODEL", "accounts/fireworks/models/gpt-oss-20b"),
-        openai_api_key=os.environ["FIREWORKS_API_KEY"],
-        openai_api_base="https://api.fireworks.ai/inference/v1",
+        model=os.environ.get("GROQ_CHAT_MODEL", "openai/gpt-oss-120b"),
+        openai_api_key=api_key,
+        openai_api_base="https://api.groq.com/openai/v1",
     )
 
     def retrieve(state: _RAGState) -> _RAGState:

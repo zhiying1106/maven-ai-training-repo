@@ -82,16 +82,21 @@ Follow these steps to prepare and submit your homework assignment:
 What is the difference between serverless and dedicated endpoints?
 
 #### ✅ Answer:
-
-_(insert your answer here)_
+- Serverless endpoints automatically scale up and down based on demand, while dedicated endpoints provide always-on, reserved compute resources for your application.
+- Serverless is typically more cost-effective for unpredictable or low-volume workloads because you pay per request, whereas dedicated has a fixed cost but is better for consistent, high-volume traffic.
+- Serverless may experience cold-start latency after periods of inactivity, while dedicated offers lower and more predictable response times.
+- Dedicated endpoints provide greater control over performance, concurrency, and resource allocation, making them better suited for production applications with strict reliability requirements.
+- Serverless is ideal for development, testing, and bursty workloads, while dedicated is recommended for latency-sensitive or mission-critical production deployments.
 
 ### ❓ Question #2:
 
 Why is it important to consider token throughput and latency when choosing an LLM for user-facing applications?
 
 #### ✅ Answer:
-
-_(insert your answer here)_
+- Latency affects how quickly users receive responses, directly impacting the overall user experience and perceived responsiveness.
+- Token throughput determines how fast the model can generate text, which is especially important for long or streaming responses.
+- Models with low latency and high throughput can handle more concurrent users and reduce waiting times during peak usage.
+- Choosing the right balance between speed, quality, and cost helps ensure the application meets user expectations while staying within budget.
 
 ## Activity 1: RAGAS Evaluation with Cost Analysis
 

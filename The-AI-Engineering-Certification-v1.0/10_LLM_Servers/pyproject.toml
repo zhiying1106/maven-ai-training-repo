@@ -13,7 +13,7 @@ dependencies = [
     "langchain-tavily>=0.1.0",
     "langgraph>=1.0.10",
     "langchain-core>=1.2.16",
-    "langchain-community>=0.4.1",
+    "langchain-community==0.3.31",
     "langchain-text-splitters>=1.1.1",
     "langchain-qdrant>=1.1.0",
     "qdrant-client>=1.17.0",
@@ -23,4 +23,7 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "langgraph-cli>=0.4.14",
     "langgraph-api>=0.4.28",
+    "groq",
+    "ragas @ git+https://github.com/vibrantlabsai/ragas.git@298b68274234c060deacab3cf5fb52aa3a20e885",
+    "rapidfuzz>=3.14.0,<4.0.0",
 ]
