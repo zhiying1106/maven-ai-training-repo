@@ -1,0 +1,72 @@
+[
+  {
+    "id": "PAY-102",
+    "title": "Payment cache degradation under load — stale pricing observed",
+    "status": "Done",
+    "created_at": "2025-11-01T20:00:00Z",
+    "description": "During the Nov 1 Black Friday load test, ~8% of checkout requests showed stale prices. Root cause: in-memory cache per pod, invalidation not propagating across replicas after a price update event.",
+    "comments": [
+      {"author": "priya.nair", "body": "Confirmed root cause — each pod has its own cache instance, invalidation only hits the pod that received the update event.", "created_at": "2025-11-02T09:00:00Z"},
+      {"author": "marcus.lee", "body": "Given Black Friday is in 3 weeks, let's move to a shared cache rather than patch invalidation logic. Redis is already in our stack for sessions.", "created_at": "2025-11-02T09:30:00Z"}
+    ]
+  },
+  {
+    "id": "ORD-58",
+    "title": "Choose datastore for new orders table",
+    "status": "Done",
+    "created_at": "2025-08-25T10:00:00Z",
+    "description": "New orders feature needs a persistent store. Need to decide between Postgres (relational, ACID) and MongoDB (flexible schema, already used by the catalog service).",
+    "comments": [
+      {"author": "wei.zhang", "body": "Wrote up RFC-004 comparing both options given the transactional requirements around order + payment + line items.", "created_at": "2025-08-27T11:00:00Z"}
+    ]
+  },
+  {
+    "id": "SEC-33",
+    "title": "Modernize auth for mobile app launch",
+    "status": "Done",
+    "created_at": "2025-06-15T09:00:00Z",
+    "description": "Umbrella ticket for auth modernization ahead of mobile launch: JWT migration, refresh tokens, and rate limiting after the credential-stuffing incident.",
+    "comments": [
+      {"author": "amara.okafor", "body": "Phase 1 (JWT) shipped in PR #150.", "created_at": "2025-06-20T12:00:00Z"},
+      {"author": "amara.okafor", "body": "Phase 2 (refresh rotation) shipped in PR #170.", "created_at": "2025-07-11T17:00:00Z"},
+      {"author": "amara.okafor", "body": "Phase 3 (rate limiting) shipped in PR #190 following the Aug 26 credential-stuffing attempt. Opened SEC-40 to revisit the specific limit once we have usage data.", "created_at": "2025-08-29T11:00:00Z"}
+    ]
+  },
+  {
+    "id": "SEC-40",
+    "title": "Revisit login rate-limit thresholds with real usage data",
+    "status": "Open",
+    "created_at": "2025-08-29T11:15:00Z",
+    "description": "SEC-33 shipped a 5-attempts/15-min login rate limit based on OWASP's general default, not validated against our own traffic. Revisit once we have a few weeks of data — concern raised in PR #190 review about shared-office-IP false positives.",
+    "comments": []
+  },
+  {
+    "id": "ARCH-12",
+    "title": "Split monolith into services per RFC-007",
+    "status": "In Progress",
+    "created_at": "2025-04-10T09:00:00Z",
+    "description": "Umbrella ticket tracking the phased monolith extraction described in RFC-007. Phase 1: billing. Phase 2: notifications. Future phases TBD based on how the first two go.",
+    "comments": [
+      {"author": "tom.harrison", "body": "Phase 1 (billing) done in PR #310 — picked billing first since it has the cleanest bounded context of any module.", "created_at": "2025-04-18T10:00:00Z"},
+      {"author": "tom.harrison", "body": "Phase 2 (notifications) done in PR #311.", "created_at": "2025-05-22T15:00:00Z"}
+    ]
+  },
+  {
+    "id": "ARCH-19",
+    "title": "Oct 2 incident: notifications latency cascaded into billing failures",
+    "status": "Done",
+    "created_at": "2025-10-02T14:30:00Z",
+    "description": "Post-incident follow-up. billing-service's synchronous, timeout-less call to notifications-service caused billing request pile-up when notifications got slow. Needs a circuit breaker.",
+    "comments": [
+      {"author": "tom.harrison", "body": "Circuit breaker added in PR #315, fails open (skips notification rather than blocking billing) and alerts on trip.", "created_at": "2025-10-05T11:30:00Z"}
+    ]
+  },
+  {
+    "id": "PRICE-21",
+    "title": "Support stacked promo codes for Dec campaign",
+    "status": "Done",
+    "created_at": "2025-11-25T09:00:00Z",
+    "description": "Marketing wants to combine a seasonal discount with referral credits for the December campaign. Requires calculate_discount() to accept multiple codes.",
+    "comments": []
+  }
+]

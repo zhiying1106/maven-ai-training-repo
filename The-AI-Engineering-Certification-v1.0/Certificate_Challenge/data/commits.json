@@ -1,0 +1,122 @@
+[
+  {
+    "sha": "a1b2c3d",
+    "author": "priya.nair",
+    "date": "2025-11-03T14:22:00Z",
+    "message": "Replace in-memory LRU cache with Redis in payment service\n\nOur in-memory cache doesn't survive pod restarts and isn't shared across replicas, which caused stale pricing data during the Black Friday load test. Redis gives us a shared, persistent cache across all payment-service replicas.\n\nRefs: PAY-102",
+    "files_changed": ["services/payment/cache.py", "services/payment/config.py", "requirements.txt"],
+    "pr_number": 245
+  },
+  {
+    "sha": "b2c3d4e",
+    "author": "priya.nair",
+    "date": "2025-11-03T16:05:00Z",
+    "message": "Add Redis connection pooling and health check for payment cache\n\nFollow-up to a1b2c3d. Adds a health check endpoint so k8s can detect Redis connection issues before they cause payment failures.",
+    "files_changed": ["services/payment/cache.py", "services/payment/health.py"],
+    "pr_number": 245
+  },
+  {
+    "sha": "c3d4e5f",
+    "author": "diego.ramirez",
+    "date": "2025-08-14T09:12:00Z",
+    "message": "fix retries",
+    "files_changed": ["services/shared/api_client.py"],
+    "pr_number": null
+  },
+  {
+    "sha": "d4e5f6g",
+    "author": "wei.zhang",
+    "date": "2025-09-02T11:30:00Z",
+    "message": "Implement orders table schema on Postgres\n\nSee RFC-004 for the datastore decision. Uses a normalized schema with foreign keys to customers and products tables, since we need transactional guarantees on order state transitions.\n\nRefs: ORD-58",
+    "files_changed": ["services/orders/models.py", "services/orders/migrations/0007_orders_table.py"],
+    "pr_number": 201
+  },
+  {
+    "sha": "e5f6g7h",
+    "author": "wei.zhang",
+    "date": "2025-09-02T13:47:00Z",
+    "message": "Add indices on orders.customer_id and orders.status for dashboard query performance",
+    "files_changed": ["services/orders/migrations/0008_orders_indices.py"],
+    "pr_number": 201
+  },
+  {
+    "sha": "f6g7h8i",
+    "author": "amara.okafor",
+    "date": "2025-06-20T10:00:00Z",
+    "message": "Add JWT-based authentication to auth service\n\nReplaces session-cookie auth ahead of the mobile app launch, since cookies don't work cleanly for native mobile clients.\n\nRefs: SEC-33",
+    "files_changed": ["services/auth/jwt.py", "services/auth/middleware.py"],
+    "pr_number": 150
+  },
+  {
+    "sha": "g7h8i9j",
+    "author": "amara.okafor",
+    "date": "2025-07-11T15:20:00Z",
+    "message": "Add refresh token rotation to auth service\n\nShort-lived access tokens (15 min) needed a refresh flow so users aren't forced to re-login constantly. Rotation on each refresh reduces replay-attack window if a refresh token leaks.\n\nRefs: SEC-33",
+    "files_changed": ["services/auth/jwt.py", "services/auth/refresh.py"],
+    "pr_number": 170
+  },
+  {
+    "sha": "h8i9j0k",
+    "author": "amara.okafor",
+    "date": "2025-08-29T09:45:00Z",
+    "message": "Add rate limiting on login attempts (5 attempts / 15 min per account)\n\nFollowing the credential-stuffing attempt flagged in SEC-33, capping login attempts per account to slow down brute-force attacks. Limit chosen to match OWASP's general guidance; open to revisiting if it causes support tickets from legitimate users.\n\nRefs: SEC-33",
+    "files_changed": ["services/auth/rate_limit.py"],
+    "pr_number": 190
+  },
+  {
+    "sha": "i9j0k1l",
+    "author": "tom.harrison",
+    "date": "2025-04-18T08:30:00Z",
+    "message": "Extract billing logic into standalone billing-service (phase 1 of monolith split)\n\nSee RFC-007. Billing is the first extraction target since it has the clearest data boundary and the least cross-module coupling.\n\nRefs: ARCH-12",
+    "files_changed": ["services/billing/*", "monolith/billing/__init__.py"],
+    "pr_number": 310
+  },
+  {
+    "sha": "j0k1l2m",
+    "author": "tom.harrison",
+    "date": "2025-05-22T14:00:00Z",
+    "message": "Extract notifications logic into standalone notifications-service (phase 2 of monolith split)\n\nRefs: ARCH-12",
+    "files_changed": ["services/notifications/*", "monolith/notifications/__init__.py"],
+    "pr_number": 311
+  },
+  {
+    "sha": "k1l2m3n",
+    "author": "tom.harrison",
+    "date": "2025-10-05T10:15:00Z",
+    "message": "Add circuit breaker between billing-service and notifications-service\n\nAfter the Oct 2 incident where a notifications-service slowdown cascaded into billing timeouts, adding a circuit breaker so billing degrades gracefully instead of failing outright.\n\nRefs: ARCH-19",
+    "files_changed": ["services/billing/clients/notifications_client.py"],
+    "pr_number": 315
+  },
+  {
+    "sha": "l2m3n4o",
+    "author": "sofia.moretti",
+    "date": "2025-12-01T09:00:00Z",
+    "message": "Refactor calculate_discount() to support stacked promo codes",
+    "files_changed": ["services/pricing/discount.py", "services/pricing/tests/test_discount.py"],
+    "pr_number": 340
+  },
+  {
+    "sha": "m3n4o5p",
+    "author": "sofia.moretti",
+    "date": "2025-12-01T09:40:00Z",
+    "message": "Update checkout-service to call new calculate_discount() signature",
+    "files_changed": ["services/checkout/order_summary.py"],
+    "pr_number": 340
+  },
+  {
+    "sha": "n4o5p6q",
+    "author": "sofia.moretti",
+    "date": "2025-12-01T09:55:00Z",
+    "message": "Update invoice-service to call new calculate_discount() signature",
+    "files_changed": ["services/invoicing/invoice_builder.py"],
+    "pr_number": 340
+  },
+  {
+    "sha": "o5p6q7r",
+    "author": "diego.ramirez",
+    "date": "2025-08-14T09:10:00Z",
+    "message": "wip",
+    "files_changed": ["services/shared/config.py"],
+    "pr_number": null
+  }
+]

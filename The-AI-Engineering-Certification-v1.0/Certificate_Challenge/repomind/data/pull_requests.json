@@ -1,0 +1,110 @@
+[
+  {
+    "number": 245,
+    "title": "Replace in-memory cache with Redis in payment service",
+    "author": "priya.nair",
+    "created_at": "2025-11-03T13:50:00Z",
+    "merged_at": "2025-11-04T17:30:00Z",
+    "linked_ticket": "PAY-102",
+    "description": "Closes PAY-102.\n\nDuring the Nov 1 load test we saw ~8% of payment requests get stale pricing because each pod had its own in-memory cache and they weren't invalidated consistently across replicas after a price update. Redis gives us one shared cache all replicas read/write, so invalidation happens once and is visible everywhere immediately.\n\nConsidered alternatives:\n- Memcached: similar shared-cache benefit, but team already runs Redis for sessions, so reusing infra won out over introducing a second caching system.\n- Just fixing invalidation logic in the in-memory cache: doesn't solve the replica-inconsistency problem at the root, only patches symptoms.",
+    "review_comments": [
+      {"author": "marcus.lee", "body": "Makes sense given we already run Redis. Did we check the added network hop latency for the hot path?", "created_at": "2025-11-03T18:20:00Z"},
+      {"author": "priya.nair", "body": "Yep — added ~2ms p50 in staging, well within our SLA budget.", "created_at": "2025-11-03T18:45:00Z"},
+      {"author": "marcus.lee", "body": "LGTM then.", "created_at": "2025-11-03T19:00:00Z"}
+    ],
+    "files_changed": ["services/payment/cache.py", "services/payment/config.py", "services/payment/health.py", "requirements.txt"]
+  },
+  {
+    "number": 201,
+    "title": "Implement orders table on Postgres per RFC-004",
+    "author": "wei.zhang",
+    "created_at": "2025-09-01T16:00:00Z",
+    "merged_at": "2025-09-03T10:00:00Z",
+    "linked_ticket": "ORD-58",
+    "description": "Closes ORD-58. Implements the Postgres option from RFC-004.\n\nSummary of the decision from the RFC discussion: orders need transactional guarantees (an order + its line items + its payment record must commit together or not at all), which Postgres gives us natively via ACID transactions. MongoDB was considered for schema flexibility, but the order data model is stable and relational, so flexibility wasn't a strong enough advantage to give up transactional safety.",
+    "review_comments": [
+      {"author": "amara.okafor", "body": "Agree with the transactional argument. One nit: can we add an index on status since the dashboard filters by it constantly?", "created_at": "2025-09-02T09:00:00Z"},
+      {"author": "wei.zhang", "body": "Good catch, added in the follow-up commit.", "created_at": "2025-09-02T13:50:00Z"}
+    ],
+    "files_changed": ["services/orders/models.py", "services/orders/migrations/0007_orders_table.py", "services/orders/migrations/0008_orders_indices.py"]
+  },
+  {
+    "number": 150,
+    "title": "JWT authentication for auth-service",
+    "author": "amara.okafor",
+    "created_at": "2025-06-19T14:00:00Z",
+    "merged_at": "2025-06-20T11:00:00Z",
+    "linked_ticket": "SEC-33",
+    "description": "Closes SEC-33 (phase 1).\n\nAhead of the mobile app launch (see PROD-88), we need auth that works for native mobile clients, which don't handle cookies the way browsers do. Moving to JWT bearer tokens sent in the Authorization header instead of session cookies.",
+    "review_comments": [
+      {"author": "tom.harrison", "body": "What's the token expiry? Want to make sure we're not issuing long-lived tokens.", "created_at": "2025-06-19T16:00:00Z"},
+      {"author": "amara.okafor", "body": "15 min access token, refresh flow coming in a follow-up PR.", "created_at": "2025-06-19T16:20:00Z"}
+    ],
+    "files_changed": ["services/auth/jwt.py", "services/auth/middleware.py"]
+  },
+  {
+    "number": 170,
+    "title": "Add refresh token rotation",
+    "author": "amara.okafor",
+    "created_at": "2025-07-10T13:00:00Z",
+    "merged_at": "2025-07-11T16:00:00Z",
+    "linked_ticket": "SEC-33",
+    "description": "Closes SEC-33 (phase 2). Adds the refresh flow promised in PR #150. Rotates the refresh token on every use so a leaked refresh token becomes invalid after its first (illegitimate) use, limiting the replay window.",
+    "review_comments": [],
+    "files_changed": ["services/auth/jwt.py", "services/auth/refresh.py"]
+  },
+  {
+    "number": 190,
+    "title": "Rate limit login attempts",
+    "author": "amara.okafor",
+    "created_at": "2025-08-28T15:00:00Z",
+    "merged_at": "2025-08-29T10:30:00Z",
+    "linked_ticket": "SEC-33",
+    "description": "Closes SEC-33 (phase 3). Following the credential-stuffing attempt on Aug 26 (see incident channel), capping login attempts at 5 per 15 minutes per account, based on general OWASP guidance for brute-force mitigation.",
+    "review_comments": [
+      {"author": "marcus.lee", "body": "5/15min feels arbitrary — did we validate this against our actual traffic patterns, or is it just the OWASP default? Worried about locking out legit users on shared office IPs.", "created_at": "2025-08-28T17:00:00Z"},
+      {"author": "amara.okafor", "body": "Fair concern, it's the OWASP default, not traffic-validated. Given the active incident I'd rather ship the conservative default now and revisit with real data once we have a few weeks of metrics. Opening SEC-40 to track that follow-up.", "created_at": "2025-08-28T17:30:00Z"},
+      {"author": "marcus.lee", "body": "Reasonable given the timeline pressure. Approving.", "created_at": "2025-08-28T17:45:00Z"}
+    ],
+    "files_changed": ["services/auth/rate_limit.py"]
+  },
+  {
+    "number": 310,
+    "title": "Extract billing-service (monolith split phase 1)",
+    "author": "tom.harrison",
+    "created_at": "2025-04-17T10:00:00Z",
+    "merged_at": "2025-04-18T09:00:00Z",
+    "linked_ticket": "ARCH-12",
+    "description": "Closes ARCH-12 (phase 1). Per RFC-007, billing is the first module extracted from the monolith because it has the clearest bounded context — it depends on customers and products data but nothing calls back into it except through a narrow API surface, unlike notifications and reporting which are more tangled.",
+    "review_comments": [],
+    "files_changed": ["services/billing/*", "monolith/billing/__init__.py"]
+  },
+  {
+    "number": 315,
+    "title": "Add circuit breaker between billing and notifications services",
+    "author": "tom.harrison",
+    "created_at": "2025-10-04T09:00:00Z",
+    "merged_at": "2025-10-05T11:00:00Z",
+    "linked_ticket": "ARCH-19",
+    "description": "Closes ARCH-19. Root cause of the Oct 2 incident: notifications-service latency spiked (unrelated DB issue on their end) and billing-service's synchronous call to notifications had no timeout, so billing requests piled up and started timing out too. Circuit breaker trips after 5 consecutive failures/timeouts and fails open (skips the notification, logs for retry) rather than blocking billing.",
+    "review_comments": [
+      {"author": "wei.zhang", "body": "Should we alert when the breaker trips, so we know notifications are being silently skipped?", "created_at": "2025-10-04T14:00:00Z"},
+      {"author": "tom.harrison", "body": "Yes, added a PagerDuty alert on trip in the same PR.", "created_at": "2025-10-04T15:00:00Z"}
+    ],
+    "files_changed": ["services/billing/clients/notifications_client.py"]
+  },
+  {
+    "number": 340,
+    "title": "Support stacked promo codes in calculate_discount()",
+    "author": "sofia.moretti",
+    "created_at": "2025-11-30T11:00:00Z",
+    "merged_at": "2025-12-01T10:00:00Z",
+    "linked_ticket": "PRICE-21",
+    "description": "Closes PRICE-21. Marketing wants to run stacked promotions (e.g. a seasonal % off + a referral credit) for the Dec campaign. Changes calculate_discount()'s signature to accept a list of promo codes instead of a single one; this is a breaking change for any caller, so checkout-service and invoice-service are updated in the same PR to avoid a broken intermediate state.",
+    "review_comments": [
+      {"author": "priya.nair", "body": "Any other services calling calculate_discount() we need to check? Want to make sure nothing's missed.", "created_at": "2025-11-30T15:00:00Z"},
+      {"author": "sofia.moretti", "body": "Just checkout and invoicing per a repo-wide grep, both updated here.", "created_at": "2025-11-30T15:20:00Z"}
+    ],
+    "files_changed": ["services/pricing/discount.py", "services/pricing/tests/test_discount.py", "services/checkout/order_summary.py", "services/invoicing/invoice_builder.py"]
+  }
+]
