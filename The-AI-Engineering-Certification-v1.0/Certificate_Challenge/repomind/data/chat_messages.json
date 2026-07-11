@@ -1,0 +1,22 @@
+[
+  {"channel": "#eng-payments", "thread_id": "th-pay-1", "author": "priya.nair", "timestamp": "2025-11-01T21:15:00Z", "text": "Load test just flagged stale pricing on ~8% of checkout requests. Digging in now."},
+  {"channel": "#eng-payments", "thread_id": "th-pay-1", "author": "priya.nair", "timestamp": "2025-11-01T22:00:00Z", "text": "Found it — each payment-service pod has its own in-memory cache, and price-update invalidation events only reach the pod that received the webhook, not all replicas."},
+  {"channel": "#eng-payments", "thread_id": "th-pay-1", "author": "marcus.lee", "timestamp": "2025-11-02T08:45:00Z", "text": "Given BF is in 3 weeks I'd rather we move to a shared cache than try to bolt-on cross-pod invalidation. We already run Redis for sessions, seems like the obvious choice."},
+  {"channel": "#eng-payments", "thread_id": "th-pay-1", "author": "priya.nair", "timestamp": "2025-11-02T09:05:00Z", "text": "Agreed, opening PAY-102 and will have a PR up today."},
+
+  {"channel": "#rfc-discuss", "thread_id": "th-ord-1", "author": "wei.zhang", "timestamp": "2025-08-27T11:30:00Z", "text": "Posted RFC-004 for the orders datastore decision — Postgres vs Mongo. Main question is whether we need transactional guarantees across order + line items + payment record."},
+  {"channel": "#rfc-discuss", "thread_id": "th-ord-1", "author": "amara.okafor", "timestamp": "2025-08-27T13:00:00Z", "text": "Catalog service already uses Mongo, so there's an infra argument for consistency there too, but I think orders is fundamentally relational data. +1 Postgres."},
+  {"channel": "#rfc-discuss", "thread_id": "th-ord-1", "author": "wei.zhang", "timestamp": "2025-08-28T09:00:00Z", "text": "Consensus seems to be Postgres given the transactional requirement outweighs the schema-flexibility argument. Closing out RFC-004, will implement in ORD-58."},
+
+  {"channel": "#eng-security", "thread_id": "th-sec-1", "author": "amara.okafor", "timestamp": "2025-08-26T22:10:00Z", "text": "Seeing a credential-stuffing pattern against /auth/login from a rotating set of IPs — hundreds of attempts per minute across many accounts."},
+  {"channel": "#eng-security", "thread_id": "th-sec-1", "author": "marcus.lee", "timestamp": "2025-08-26T22:20:00Z", "text": "Let's get a rate limit on login attempts asap, we can tune the exact threshold later."},
+  {"channel": "#eng-security", "thread_id": "th-sec-1", "author": "amara.okafor", "timestamp": "2025-08-28T15:10:00Z", "text": "PR #190 up with a 5/15min per-account limit, based on OWASP's default since we don't have our own traffic baseline yet."},
+  {"channel": "#eng-security", "thread_id": "th-sec-1", "author": "marcus.lee", "timestamp": "2025-08-28T17:05:00Z", "text": "Left a comment on the PR — worried about shared office IPs tripping this, but agree we should ship the conservative default now given the active incident."},
+
+  {"channel": "#incidents", "thread_id": "th-arch-1", "author": "tom.harrison", "timestamp": "2025-10-02T15:00:00Z", "text": "Billing timeouts spiking. Looks like it's waiting on calls to notifications-service, which is also degraded right now (unrelated DB issue on their side)."},
+  {"channel": "#incidents", "thread_id": "th-arch-1", "author": "tom.harrison", "timestamp": "2025-10-02T15:45:00Z", "text": "Confirmed — billing's call to notifications has no timeout, so it just piles up threads waiting. Need a circuit breaker so this can't cascade again."},
+  {"channel": "#incidents", "thread_id": "th-arch-1", "author": "wei.zhang", "timestamp": "2025-10-02T16:00:00Z", "text": "+1, and we should alert when it trips so we know we're silently skipping notifications rather than finding out from a customer complaint."},
+
+  {"channel": "#eng-backend", "thread_id": "th-arch-2", "author": "tom.harrison", "timestamp": "2025-04-15T10:00:00Z", "text": "Kicking off the monolith split per RFC-007. Starting with billing since it has the narrowest dependency surface of anything we profiled."},
+  {"channel": "#eng-backend", "thread_id": "th-arch-2", "author": "sofia.moretti", "timestamp": "2025-04-15T10:20:00Z", "text": "Makes sense, notifications and reporting both have way more cross-module calls, would be riskier to extract first."}
+]

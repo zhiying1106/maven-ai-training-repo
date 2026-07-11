@@ -1,0 +1,47 @@
+[
+  {
+    "question": "Why did we switch the payment service from an in-memory cache to Redis?",
+    "expected_sources": ["PAY-102", "PR#245", "commit:a1b2c3d", "chat:th-pay-1", "email:email-pay-1"],
+    "expected_answer_summary": "In-memory per-pod caching didn't propagate invalidation across replicas, causing ~8% stale pricing during a Black Friday load test. Redis (already used for sessions) gives one shared cache across replicas, resolving the root cause with acceptable added latency (~2ms)."
+  },
+  {
+    "question": "What breaks if I change the calculate_discount() function in the pricing service?",
+    "expected_sources": ["commit:l2m3n4o", "commit:m3n4o5p", "commit:n4o5p6q", "PR#340", "PRICE-21"],
+    "expected_answer_summary": "checkout-service (order_summary.py) and invoicing-service (invoice_builder.py) both call calculate_discount() directly and were updated in the same PR when its signature last changed — both should be checked/updated for any future signature change."
+  },
+  {
+    "question": "Who decided we'd use PostgreSQL instead of MongoDB for the orders table, and why?",
+    "expected_sources": ["ORD-58", "RFC-004", "PR#201", "chat:th-ord-1"],
+    "expected_answer_summary": "Decision made by wei.zhang with team input (RFC-004), agreed in #rfc-discuss. Postgres chosen over Mongo because orders require multi-row transactional guarantees (order + line items + payment record must commit atomically), which outweighed Mongo's schema-flexibility benefit for this specific stable data model."
+  },
+  {
+    "question": "Is there a reason the retry logic in api_client.py uses exponential backoff with a specific retry cap?",
+    "expected_sources": [],
+    "expected_answer_summary": "NO RATIONALE FOUND — commit c3d4e5f ('fix retries') and o5p6q7r ('wip') touch this file with no linked PR, ticket, or description. This is an intentional negative-control case: the correct system behavior is to say no rationale was found in the source artifacts, not to fabricate one."
+  },
+  {
+    "question": "What was the outcome of the RFC about splitting the monolith into microservices?",
+    "expected_sources": ["RFC-007", "ARCH-12", "PR#310", "PR#311", "PR#315", "ARCH-19", "chat:th-arch-2", "email:email-arch-1"],
+    "expected_answer_summary": "Accepted and in progress. Billing extracted first (PR#310, narrowest dependency surface), then notifications (PR#311). A circuit-breaker gap was discovered after an Oct 2 incident caused by an un-timed-out cross-service call, and retrofitted in PR#315 (ARCH-19). Reporting extraction deferred as highest-risk/highest-coupling."
+  },
+  {
+    "question": "Summarize what changed in the auth module in the last few months and why.",
+    "expected_sources": ["SEC-33", "PR#150", "PR#170", "PR#190", "commit:f6g7h8i", "commit:g7h8i9j", "commit:h8i9j0k"],
+    "expected_answer_summary": "Three-phase modernization ahead of mobile launch: (1) JWT auth replacing session cookies since cookies don't suit native mobile clients, (2) refresh token rotation to balance short-lived access tokens with usability, (3) login rate limiting after a credential-stuffing incident, using an unvalidated OWASP-default threshold flagged for follow-up."
+  },
+  {
+    "question": "Has anyone raised concerns about the current rate-limiting approach?",
+    "expected_sources": ["PR#190 review comments", "SEC-40", "chat:th-sec-1"],
+    "expected_answer_summary": "Yes — marcus.lee raised concern in the PR#190 review that the 5-attempts/15-min threshold was an unvalidated OWASP default and could false-positive on shared office IPs. Team acknowledged and shipped anyway given active incident pressure, opening SEC-40 to revisit with real usage data (still open/unresolved)."
+  },
+  {
+    "question": "What was the original business case for splitting the monolith?",
+    "expected_sources": ["PROP-001", "RFC-007", "ARCH-12"],
+    "expected_answer_summary": "Multi-hop test case: PROP-001 (Jan 2025 platform modernization proposal) identifies deploy times and cross-team merge conflicts on the monolith as a growing velocity problem per Q4 2024 engineering surveys, and calls for a phased decomposition RFC. RFC-007 is the RFC that resulted, formalizing the phase ordering. A good answer traces the chain PROP-001 → RFC-007 → ARCH-12 rather than only citing the nearest document (RFC-007) in isolation."
+  },
+  {
+    "question": "What's the current best practice for rate limiting in FastAPI?",
+    "expected_sources": [],
+    "expected_answer_summary": "NOT ANSWERABLE FROM INTERNAL DATA — this is an intentional test case for the external-search fallback tool (e.g. Tavily), not the internal RAG corpus. Correct behavior: agent should invoke the web search tool rather than answering from internal data alone."
+  }
+]

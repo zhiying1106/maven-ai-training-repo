@@ -1,0 +1,18 @@
+[
+  {
+    "thread_id": "email-pay-1",
+    "subject": "Payment cache incident — resolution and Redis migration",
+    "from": "priya.nair@northwind.example",
+    "to": ["eng-leadership@northwind.example"],
+    "date": "2025-11-04T18:00:00Z",
+    "body": "Summary for leadership visibility ahead of Black Friday:\n\nIssue: load testing surfaced stale pricing on ~8% of checkout requests due to per-pod in-memory caching in payment-service not propagating invalidation across replicas.\n\nFix: migrated payment-service caching to Redis (already used for sessions), giving a single shared cache all replicas read from. Added p50/p95 latency checks in staging showing ~2ms added latency, well within SLA. Shipped and merged Nov 4, well ahead of the Nov 21 Black Friday freeze window.\n\nNo customer-facing impact occurred; this was caught in pre-production load testing."
+  },
+  {
+    "thread_id": "email-arch-1",
+    "subject": "RE: Oct 2 incident postmortem — billing/notifications cascade",
+    "from": "tom.harrison@northwind.example",
+    "to": ["eng-leadership@northwind.example", "eng-all@northwind.example"],
+    "date": "2025-10-06T09:00:00Z",
+    "body": "Postmortem summary for the Oct 2 incident (18 min of elevated billing errors, no data loss):\n\nRoot cause: billing-service calls notifications-service synchronously with no timeout. When notifications-service degraded due to an unrelated DB issue, billing requests piled up waiting and began timing out themselves.\n\nFix shipped Oct 5 (PR #315): circuit breaker on the billing->notifications call path, fails open after 5 consecutive failures (skips the notification, logs for async retry, does not block the billing transaction), with a PagerDuty alert on trip so we have visibility when this happens rather than finding out from a support ticket.\n\nFollow-up action: audit other synchronous cross-service calls in the post-monolith-split architecture for similar timeout gaps (tracked in ARCH-20, not yet started)."
+  }
+]
