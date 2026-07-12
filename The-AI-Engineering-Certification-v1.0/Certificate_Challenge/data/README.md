@@ -12,7 +12,7 @@ This is a synthetic but internally-consistent dataset standing in for a real eng
 | `chat_messages.json` | Slack API message objects | 16 messages across 5 threads/channels, cross-referenced by topic |
 | `emails.json` | Email objects | 2 leadership-summary emails referencing the same decisions from other angles |
 | `docs.json` | Internal RFC docs + project proposal | 1 project proposal (`PROP-001`, Jan 2025) plus 2 RFCs (RFC-004: orders datastore, RFC-007: monolith split) |
-| `ground_truth_eval.json` | — | Maps the 8 seed questions from Task 1 to expected source citations and expected answer summaries — use this directly as your Task 5 eval harness's ground truth |
+| `ground_truth_eval.json` | — | Maps 30 questions (the 8 seed questions from Task 1, plus 22 synthetic paraphrases/variations against the same decision threads) to expected source citations and expected answer summaries — use this directly as your Task 5 eval harness's ground truth |
 
 ## The project proposal (`PROP-001`) ties everything together
 
@@ -29,7 +29,7 @@ This gives you a top-level "why did we even start this" artifact to test against
 - **Cross-referencing is real, not decorative.** Ticket IDs, PR numbers, and thread IDs in one file genuinely appear in others (e.g. `PAY-102` appears in the ticket, the PR, the commit message, the Slack thread, and the email). This lets you actually test graph-linking logic, not just vector search over isolated blobs.
 - **Two intentionally undocumented commits** exist specifically so you can demonstrate your confidence-check/guardrail correctly declining to answer rather than hallucinating a plausible-sounding rationale.
 - **One question (rate limiting best practice) has zero internal sources on purpose** — this is your test case for the external-search-tool fallback path, not a gap in the data.
-- **7 decision "threads" span the 8 seed evaluation questions** from your Task 1 documentation, so you can plug `ground_truth_eval.json` straight into your Task 5 RAGAS/LLM-as-judge harness.
+- **7 decision "threads" span the 30 evaluation questions** (8 seed questions from Task 1 plus 22 synthetic variations) in `ground_truth_eval.json`, so you can plug it straight into your Task 5 RAGAS/LLM-as-judge harness.
 
 ## How to use this
 
