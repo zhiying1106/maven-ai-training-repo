@@ -4,4 +4,18 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
   "openai==2.15.0",
+  "langgraph==0.2.70",
+  "langchain-core==0.3.29",
+  "langsmith==0.1.147",
+  "qdrant-client==1.12.1",
+  "tavily-python==0.5.0",
+]
+
+# Eval-only tools. NOT part of the deployed runtime: ragas pulls
+# langchain-openai (openai<2.0.0), which conflicts with openai==2.15.0 above.
+# Install in a separate env via eval/requirements-eval.txt.
+[project.optional-dependencies]
+eval = [
+  "ragas==0.2.6",
+  "datasets==3.2.0",
 ]

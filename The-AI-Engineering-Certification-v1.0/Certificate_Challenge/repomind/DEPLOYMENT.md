@@ -20,15 +20,21 @@ The RAG endpoint is a Python Vercel Function at `api/chat.py`, so it will not ap
 
 ## Required environment variables
 
+The app calls its LLM and embedding models through [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) (`https://ai-gateway.vercel.sh/v1`), not OpenAI directly — model IDs are provider-prefixed (`openai/<model>`).
+
 Add these in Vercel Project Settings > Environment Variables for Production and Preview:
 
 ```bash
-OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-5.4-mini
-OPENAI_ROUTER_MODEL=gpt-5.4-mini
+AI_GATEWAY_API_KEY=vck_...
+OPENAI_MODEL=openai/gpt-5.4-mini
+OPENAI_ROUTER_MODEL=openai/gpt-5.4-mini
 ```
 
-`OPENAI_MODEL` and `OPENAI_ROUTER_MODEL` are optional. The app defaults to `gpt-5.4-mini`, the cost-conscious GPT-5.4 variant optimized for high-volume workloads. Use `gpt-5.6-terra` (balanced) or `gpt-5.6-sol` (frontier) if you want stronger reasoning and have budget for it.
+`AI_GATEWAY_API_KEY` can be omitted for the *production* deployment specifically — Vercel auto-injects a `VERCEL_OIDC_TOKEN` for Vercel Functions in production, which `rag/agent.py::_client()` falls back to. Set it explicitly anyway for Preview deployments and local dev, since OIDC tokens are short-lived. Generate a key at Vercel dashboard → AI Gateway → API Keys.
+
+`OPENAI_MODEL` and `OPENAI_ROUTER_MODEL` are optional. The app defaults to `openai/gpt-5.4-mini`, the cost-conscious GPT-5.4 variant optimized for high-volume workloads. Use `openai/gpt-5.6-terra` (balanced) or `openai/gpt-5.6-sol` (frontier) if you want stronger reasoning and have budget for it — any AI Gateway model ID works here (see `https://ai-gateway.vercel.sh/v1/models` for the full list), not just OpenAI's.
+
+Separately, `OPENAI_API_KEY` (a real OpenAI key, not an AI Gateway key) is still needed if you run the offline eval harness (`eval/run_eval.py`) — RAGAS's own internal metric calls use it directly rather than going through the gateway. It is not read by the deployed app.
 
 ## Vercel settings
 

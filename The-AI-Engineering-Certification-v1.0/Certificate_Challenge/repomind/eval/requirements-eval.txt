@@ -1,0 +1,14 @@
+# Offline evaluation dependencies for eval/run_eval.py.
+#
+# These are NOT deployed with the Vercel function and MUST be installed in a
+# SEPARATE virtualenv from the runtime (repomind/requirements.txt). ragas pulls
+# langchain-openai, which pins openai<2.0.0, so it is incompatible with the
+# runtime's openai==2.15.0. openai is left unpinned here on purpose so the
+# resolver can pick a <2.0.0 build that satisfies ragas.
+langgraph==0.2.70
+langchain-core==0.3.29
+langsmith==0.1.147
+qdrant-client==1.12.1
+tavily-python==0.5.0
+ragas==0.2.6
+datasets==3.2.0
