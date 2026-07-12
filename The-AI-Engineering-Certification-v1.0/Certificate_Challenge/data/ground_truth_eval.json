@@ -31,7 +31,7 @@
   },
   {
     "question": "Has anyone raised concerns about the current rate-limiting approach?",
-    "expected_sources": ["PR#190 review comments", "SEC-40", "chat:th-sec-1"],
+    "expected_sources": ["PR#190", "SEC-40", "chat:th-sec-1"],
     "expected_answer_summary": "Yes — marcus.lee raised concern in the PR#190 review that the 5-attempts/15-min threshold was an unvalidated OWASP default and could false-positive on shared office IPs. Team acknowledged and shipped anyway given active incident pressure, opening SEC-40 to revisit with real usage data (still open/unresolved)."
   },
   {
@@ -43,5 +43,110 @@
     "question": "What's the current best practice for rate limiting in FastAPI?",
     "expected_sources": [],
     "expected_answer_summary": "NOT ANSWERABLE FROM INTERNAL DATA — this is an intentional test case for the external-search fallback tool (e.g. Tavily), not the internal RAG corpus. Correct behavior: agent should invoke the web search tool rather than answering from internal data alone."
+  },
+  {
+    "question": "What alternatives did the team consider before deciding to migrate the payment-service cache to Redis, and why were they rejected?",
+    "expected_sources": ["PR#245", "PAY-102", "chat:th-pay-1"],
+    "expected_answer_summary": "PR#245's description lists two alternatives: Memcached (rejected — Redis was already used for sessions, so reusing existing infra won out over introducing a second caching system) and patching the in-memory cache's invalidation logic (rejected — only patches symptoms, doesn't fix the root replica-inconsistency problem)."
+  },
+  {
+    "question": "Why did the team choose Postgres for the orders table even though most other services default to MongoDB?",
+    "expected_sources": ["RFC-004", "ORD-58", "PR#201"],
+    "expected_answer_summary": "RFC-004 notes most newer services default to Mongo for consistency with catalog-service, but orders needs multi-row transactional guarantees (order + line items + payment record must commit/rollback together), which Postgres provides natively. The order data model is stable, so Mongo's schema-flexibility benefit didn't apply strongly — team explicitly accepted introducing a second primary datastore technology given the strength of the transactional argument."
+  },
+  {
+    "question": "Why was auth modernization split into three separate PRs (JWT, refresh tokens, rate limiting) instead of one big rewrite?",
+    "expected_sources": ["PROP-001", "SEC-33", "PR#150", "PR#170", "PR#190"],
+    "expected_answer_summary": "PROP-001's auth workstream recommended a phased approach — token-based auth first, then a refresh flow, then hardening (rate limiting/abuse detection) — sequenced so each phase ships independently rather than blocking on a single big rewrite. SEC-33 tracked this as three phases, shipped in PR#150, PR#170, PR#190, with phase 3 accelerated by the Aug 26 credential-stuffing incident."
+  },
+  {
+    "question": "Why was billing chosen as the first service to extract from the monolith instead of notifications or reporting?",
+    "expected_sources": ["RFC-007", "ARCH-12", "PR#310", "chat:th-arch-2"],
+    "expected_answer_summary": "RFC-007 prioritized modules by dependency-boundary cleanliness. Billing had the narrowest dependency surface / clearest bounded context (depends on customers/products but has few reverse callers), versus notifications (moderate coupling, mostly fire-and-forget) and reporting (highest coupling, reads from nearly every other module — deferred until the extraction pattern is proven). Chat thread th-arch-2 shows the same reasoning discussed informally before the PR."
+  },
+  {
+    "question": "Why were checkout-service and invoice-service updated in the same PR as the calculate_discount() signature change instead of separate PRs?",
+    "expected_sources": ["PR#340", "PRICE-21"],
+    "expected_answer_summary": "PR#340 changed calculate_discount() to accept a list of promo codes instead of a single one — a breaking change for any caller. checkout-service and invoice-service were updated in the same PR specifically to avoid a broken intermediate state where callers would hit the new function with the old signature."
+  },
+  {
+    "question": "Why does the billing-to-notifications circuit breaker send a PagerDuty alert when it trips?",
+    "expected_sources": ["PR#315", "ARCH-19", "chat:th-arch-1"],
+    "expected_answer_summary": "The breaker fails open (skips the notification rather than blocking billing), which could otherwise fail silently. wei.zhang raised in chat (th-arch-1) that the team should alert on trip so they'd know notifications were being silently skipped rather than finding out from a customer complaint; tom.harrison added the PagerDuty alert in the same PR (#315)."
+  },
+  {
+    "question": "Why does the auth service rotate the refresh token on every use instead of reusing the same one?",
+    "expected_sources": ["commit:g7h8i9j", "PR#170", "SEC-33"],
+    "expected_answer_summary": "Short-lived (15 min) access tokens needed a refresh flow, and rotating the refresh token on every use reduces the replay-attack window if a refresh token leaks — a stolen refresh token becomes invalid after its first (illegitimate) use, per commit g7h8i9j / PR#170."
+  },
+  {
+    "question": "What happens to payment-service if the Redis cache it depends on becomes unavailable?",
+    "expected_sources": ["commit:b2c3d4e", "PR#245"],
+    "expected_answer_summary": "Partially documented: commit b2c3d4e ('Add Redis connection pooling and health check for payment cache') added a health-check endpoint specifically so k8s can detect Redis connection issues before they cause payment failures. A good answer should note detection/mitigation was added but the artifacts don't fully document request-level fallback behavior during an outage."
+  },
+  {
+    "question": "What else was changed alongside the orders table schema migration, and why?",
+    "expected_sources": ["commit:d4e5f6g", "commit:e5f6g7h", "PR#201"],
+    "expected_answer_summary": "The orders schema migration (commit d4e5f6g, migration 0007) was followed by a second migration (commit e5f6g7h, migration 0008) adding indices on orders.customer_id and orders.status — added because, per amara.okafor's PR#201 review comment, 'the dashboard filters by it constantly.'"
+  },
+  {
+    "question": "What breaks if the circuit breaker between billing-service and notifications-service is removed?",
+    "expected_sources": ["PR#315", "ARCH-19", "chat:th-arch-1", "email:email-arch-1"],
+    "expected_answer_summary": "Removing it would reintroduce the Oct 2 failure mode: billing-service's synchronous, timeout-less call to notifications-service could again pile up billing requests and cause timeouts if notifications-service degrades, as happened in the ARCH-19 incident before the breaker was added in PR#315."
+  },
+  {
+    "question": "Based on the monolith-split RFC, what would be involved in extracting a third module after notifications?",
+    "expected_sources": ["RFC-007", "ARCH-12"],
+    "expected_answer_summary": "RFC-007's phase ordering lists reporting as phase 3, explicitly deferred because it has the highest coupling (reads from nearly every other module's data) — the plan was to defer it until the extraction pattern was proven on the lower-risk billing/notifications phases. ARCH-12 confirms only phases 1-2 are done and future phases are still TBD based on how those went."
+  },
+  {
+    "question": "What was the original justification for hardening the payment caching infrastructure, and how does it connect to the eventual Redis migration?",
+    "expected_sources": ["PROP-001", "PAY-102", "PR#245"],
+    "expected_answer_summary": "Multi-hop test case: PROP-001 (Jan 2025) flagged payment-service's in-memory caching as a known risk for Black Friday-scale traffic, identified in a Q4 2024 capacity review, and recommended evaluating a shared caching layer (noting Redis was already used for sessions) ahead of Nov 2025 peak season. The Nov 1 load test then surfaced exactly this predicted risk as real stale-pricing incidents (PAY-102), resolved via the Redis migration (PR#245). A good answer chains PROP-001 → PAY-102 → PR#245 rather than citing only the nearest document."
+  },
+  {
+    "question": "Of the four workstreams in the 2025 platform modernization proposal, which have shipped and which are still in progress?",
+    "expected_sources": ["PROP-001", "PAY-102", "PR#245", "ORD-58", "RFC-004", "PR#201", "SEC-33", "PR#150", "PR#170", "PR#190", "ARCH-12", "RFC-007", "PR#310", "PR#311"],
+    "expected_answer_summary": "Hardest multi-hop synthesis case, requiring all four threads: (1) Payment infrastructure hardening — shipped (PR#245, Nov 2025, ahead of peak season). (2) Orders datastore — shipped (RFC-004 accepted, implemented in PR#201). (3) Auth modernization — shipped, all three phases complete (PR#150, #170, #190 under SEC-33). (4) Monolith decomposition — still in progress; only phases 1-2 (billing, notifications) done per ARCH-12, with reporting deferred and no phase-3 date committed."
+  },
+  {
+    "question": "What originally motivated the JWT/refresh-token/rate-limiting auth changes, and in what order did they ship?",
+    "expected_sources": ["PROP-001", "SEC-33", "PR#150", "PR#170", "PR#190"],
+    "expected_answer_summary": "PROP-001 (workstream 3) called for phased auth modernization ahead of the planned mobile app launch, since session-cookie auth doesn't work cleanly for native mobile clients. SEC-33 tracked three phases shipped in order: JWT (PR#150, June 2025), refresh token rotation (PR#170, July 2025), then login rate limiting (PR#190, Aug 2025) — the third phase accelerated by the Aug 26 credential-stuffing incident rather than purely following the original modernization timeline."
+  },
+  {
+    "question": "Did the payment-service Redis migration ship before the Black Friday code freeze, and how do we know?",
+    "expected_sources": ["PR#245", "email:email-pay-1", "PAY-102"],
+    "expected_answer_summary": "Yes — PR#245 merged Nov 4, 2025, and the leadership email (email-pay-1) explicitly states it was 'shipped and merged Nov 4, well ahead of the Nov 21 Black Friday freeze window,' with no customer-facing impact since the issue was caught in pre-production load testing."
+  },
+  {
+    "question": "Did anyone raise concerns about added latency when the payment service moved to Redis?",
+    "expected_sources": ["PR#245"],
+    "expected_answer_summary": "Yes — marcus.lee asked in the PR#245 review whether the added network-hop latency for the hot path was checked; priya.nair responded that staging showed ~2ms added p50 latency, well within SLA budget, and the concern was resolved before merge with no follow-up ticket opened (unlike the rate-limiting concern in PR#190/SEC-40)."
+  },
+  {
+    "question": "Was the 5-attempts-per-15-minutes login rate limit validated against real traffic data before it shipped?",
+    "expected_sources": ["PR#190", "SEC-40"],
+    "expected_answer_summary": "No — per the PR#190 review discussion, it's explicitly the OWASP default, not validated against Northwind's own traffic patterns. marcus.lee flagged the risk of false positives on shared office IPs; the team shipped it anyway given active incident pressure and opened SEC-40 (still Open) to revisit once real usage data is available."
+  },
+  {
+    "question": "What was the reasoning behind the change in services/shared/config.py from commit o5p6q7r?",
+    "expected_sources": [],
+    "expected_answer_summary": "NO RATIONALE FOUND — commit o5p6q7r's message is just 'wip' with no linked PR, ticket, or description (same negative-control pattern as commit c3d4e5f, both by diego.ramirez on the same day, 2025-08-14). Correct behavior is to say no rationale was found rather than infer one from the filename or surrounding commits."
+  },
+  {
+    "question": "What issue was commit c3d4e5f fixing, and why was that specific approach chosen?",
+    "expected_sources": [],
+    "expected_answer_summary": "NO RATIONALE FOUND — commit c3d4e5f's message is just 'fix retries' (services/shared/api_client.py) with no linked PR or ticket explaining what was broken or why any particular fix approach was chosen. Intentional negative-control case testing whether the system fabricates an explanation when asked to reference the commit directly by ID rather than infer one from a vague commit message."
+  },
+  {
+    "question": "What's the standard retry/backoff strategy recommended for calling third-party payment APIs?",
+    "expected_sources": [],
+    "expected_answer_summary": "NOT ANSWERABLE FROM INTERNAL DATA — no internal artifact documents a retry/backoff policy for third-party payment API calls (the only related internal artifact, commit c3d4e5f, is itself an undocumented negative-control case). Correct behavior: route to external search rather than answering from internal data or general LLM knowledge alone."
+  },
+  {
+    "question": "What's a good way to unit-test circuit breaker behavior in a Python microservice?",
+    "expected_sources": [],
+    "expected_answer_summary": "NOT ANSWERABLE FROM INTERNAL DATA — internal artifacts (PR#315/ARCH-19) document why a circuit breaker was added and how it behaves in production, but nothing about testing methodology for it. Correct behavior: route to external search rather than internal retrieval."
   }
 ]
