@@ -11,11 +11,9 @@ dependencies = [
   "tavily-python==0.5.0",
 ]
 
-# Eval-only tools. NOT part of the deployed runtime: ragas pulls
-# langchain-openai (openai<2.0.0), which conflicts with openai==2.15.0 above.
-# Install in a separate env via eval/requirements-eval.txt.
-[project.optional-dependencies]
-eval = [
-  "ragas==0.2.6",
-  "datasets==3.2.0",
-]
+# Eval-only tools (ragas, datasets) are intentionally NOT declared here, even
+# as an optional-dependencies group: `uv lock` resolves a single lockfile
+# that must satisfy the base project and every extra simultaneously, and
+# ragas pulls langchain-openai (openai<2.0.0), which conflicts with
+# openai==2.15.0 above. That resolution failure is what breaks `uv lock` on
+# Vercel. Install eval deps in a separate env via eval/requirements-eval.txt.

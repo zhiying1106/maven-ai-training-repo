@@ -1,17 +1,56 @@
-# The Certification Challenge — Submission Document
+# RepoMind — Deliverables Traceability Document
 ### Project: RepoMind — A Living Knowledge Agent for Engineering Teams
+
+This document maps every graded line item in the **Cert Challenge Rubric** to (a) where it is answered in writing below and (b) the exact file/line location in the codebase that implements it. Where the rubric deliverable is a design artifact (a diagram, a written rationale) rather than code, the code column says so explicitly.
+
+**Status legend**
+
+| Symbol | Meaning |
+|---|---|
+| ✅ | Implemented in code, matches this document |
+| 📝 | Design/planning deliverable -- no code required, satisfied by the writing below |
+| ⚠️ | Described below but NOT yet implemented in code -- gap to close before submission |
+| 🔲 | Not started |
+
+Repo root for all code paths below: `The-AI-Engineering-Certification-v1.0/Certificate_Challenge/repomind/`
 
 ---
 
+## Rubric Traceability Table
+
+| Task | Deliverable | Pts | Doc Section | Code Location | Status |
+|---|---|---|---|---|---|
+| 1 | 1-sentence problem statement | 1 | Task 1 S1 | n/a -- writing only | 📝 |
+| 1 | 1-2 paragraphs on why it's a problem | 3 | Task 1 S2 | n/a -- writing only | 📝 |
+| 1 | Workflow diagram (today, without RepoMind) | 3 | Task 1 S3 | n/a -- writing only | 📝 |
+| 1 | Eval question / input-output pairs | 2 | Task 1 S4 | data/ground_truth_eval.json (8 seed pairs, expanded to 30 in Task 5) | ✅ |
+| 2 | Solution in one sentence | 1 | Task 2 S1 | n/a -- writing only | 📝 |
+| 2 | Infrastructure diagram + 1-sentence rationale per tool | 7 | Task 2 S2 | see per-component code column in that section's table; gateway migration verified end-to-end (Task 2 requirements checklist) | ✅ |
+| 2 | Agent workflow diagram (end to end) | 7 | Task 2 S3 | rag/agent.py:147-536 (node_router → node_retrieve/node_graph_traverse → node_synthesize → node_confidence_check → run_agent) | ✅ |
+| 3 | Data sources + external APIs described | 5 | Task 3 S2 | rag/knowledge_base.py:1-206, data/*.json (6 artifact types), Tavily tool in rag/agent.py | ✅ |
+| 3 | Chunking strategy + rationale | 5 | Task 3 S1 | rag/knowledge_base.py:31-206 (per-artifact chunk builders) | ✅ |
+| 4 | End-to-end prototype deployed with front end | 15 | Task 4 | app/page.tsx, components/ChatInterface.tsx, api/chat.py, vercel.json | ✅ deployed at `https://certificatechallenge1-self.vercel.app/` (Vercel `uv lock` build blocker on pyproject.toml's `eval` extra fixed) |
+| 5 | Test dataset (synthetic or assembled) | 2 | Task 5 S1 | data/ground_truth_eval.json (30 entries) | ✅ |
+| 5 | Evaluation harness | 10 | Task 5 S2 | eval/run_eval.py (RAGAS via run_ragas_eval + custom llm_judge_score) | ✅ |
+| 5 | Conclusions on pipeline performance | 3 | Task 5 S3 | eval/results_hybrid_20260712_144326.json + Task 5 S3 write-up | ✅ |
+| 6 | Advanced retrieval technique implemented | 6 | Task 6 S1 | rag/retrieval.py (BM25 + RRF fusion), rag/knowledge_graph.py (build_knowledge_graph, traverse), rag/agent.py:195-289 (node_retrieve, node_graph_traverse) | ✅ |
+| 6 | Before/after performance table | 2 | Task 6 S2 | eval/results_dense_20260712_145011.json vs eval/results_hybrid_20260712_144326.json, `REPOMIND_RETRIEVAL_MODE` in rag/agent.py:184 | ✅ |
+| 6 | Second improvement, evidenced by harness | 6 | Task 6 S3 | rag/agent.py:147 (node_router prompt fix), rag/agent.py:90-176 (`_chat` temperature param, temperature=0 on router call); eval/results_hybrid_20260712_151159.json before/after | ✅ |
+| 7 | Keep/change reflection for Demo Day | 2 | Task 7 | n/a -- writing only | ✅ |
+| Final | Loom demo video <=10 min | 10 | n/a | external link -- not present in repo | ✅ |
+| Final | Written document addressing each deliverable | 10 | this document | n/a | ✅ (this file) |
+| Final | All relevant code in public repo | 0 | n/a | repomind/ (this repo), pushed to `github.com/zhiying1106/maven-ai-training-repo` | ✅ |
+
+---
 ## Task 1: Defining Problem, Audience, and Scope
 
 ### 1. The problem (one sentence)
 
-Data scientists lose hours re-deriving the reasoning behind past code and architecture decisions because that context is scattered across commits, PRs, tickets, and chat threads, and it disappears when the people who made the decisions leave, forget, or move teams.
+Software engineers lose hours re-deriving the reasoning behind past code and architecture decisions because that context is scattered across commits, PRs, tickets, and chat threads, and it disappears when the people who made the decisions leave, forget, or move teams.
 
 ### 2. Why this is a problem
 
-**Who has the problem?** Mid-level and senior data scientists — especially new joiners onboarding onto an existing codebase, and engineers returning to a part of the system they haven't touched in months. Engineering managers face a related version of this problem when a departing engineer takes undocumented context with them.
+**Who has the problem?** Mid-level and senior software engineers — especially new joiners onboarding onto an existing codebase, and engineers returning to a part of the system they haven't touched in months. Engineering managers face a related version of this problem when a departing engineer takes undocumented context with them.
 
 **What are they trying to do?** Before changing or extending existing code, they need to understand *why* something was built the way it was — was a design choice deliberate or accidental debt? What will break if I touch this? Who decided this, and is that reasoning still valid today?
 
