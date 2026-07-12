@@ -1,1 +1,11 @@
+# Runtime dependencies for the Vercel Python Function (api/chat.py -> rag/*).
+# Keep this set resolvable: ragas/datasets are intentionally NOT here because
+# ragas pulls langchain-openai, which requires openai<2.0.0 and is therefore
+# unsatisfiable alongside openai==2.15.0. Those are eval-only tools — see
+# eval/requirements-eval.txt.
 openai==2.15.0
+langgraph==0.2.70
+langchain-core==0.3.29
+langsmith==0.1.147
+qdrant-client==1.12.1
+tavily-python==0.5.0

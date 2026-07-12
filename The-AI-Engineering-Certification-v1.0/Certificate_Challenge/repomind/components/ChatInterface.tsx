@@ -4,6 +4,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { LoadingBubble, MessageBubble } from "./MessageBubble";
 import type { AgentResponse, Message } from "@/lib/types";
 
+/** Generate or retrieve a stable session ID that persists across page reloads. */
+function getSessionId(): string {
+  const KEY = "repomind_session_id";
+  if (typeof window === "undefined") return "";
+  let id = localStorage.getItem(KEY);
+  if (!id) {
+    id = `sess-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem(KEY, id);
+  }
+  return id;
+}
+
 const SAMPLE_QUESTIONS = [
   "Why did we switch the payment service from an in-memory cache to Redis?",
   "What breaks if I change the calculate_discount() function?",
@@ -47,9 +59,15 @@ export function ChatInterface() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const sessionId = useRef<string>("");
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Initialise stable session ID on mount (client-side only)
+  useEffect(() => {
+    sessionId.current = getSessionId();
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -88,7 +106,7 @@ export function ChatInterface() {
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: trimmed, history }),
+          body: JSON.stringify({ message: trimmed, history, sessionId: sessionId.current }),
         });
 
         if (!res.ok) {
@@ -164,7 +182,7 @@ export function ChatInterface() {
             Northwind Analytics synthetic data
           </p>
           <p>Commits / PRs / Tickets / Docs / Chat / Email</p>
-          <p className="mt-1 text-gray-300">Powered by OpenAI</p>
+          <p className="mt-1 text-gray-300">LangGraph · Qdrant · Tavily · LangSmith</p>
         </div>
       </aside>
 

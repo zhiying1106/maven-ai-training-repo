@@ -2,6 +2,8 @@
 /node_modules
 /.pnp
 .pnp.js
+/.venv/
+/.venv-eval/
 
 # next.js
 /.next/
@@ -20,9 +22,14 @@
 *.tsbuildinfo
 next-env.d.ts
 
+# runtime answer cache (generated at request time)
+/data/answer_cache.json
+
 # OS
 .DS_Store
 Thumbs.db
 
 .vercel
 .env*
+
+.vercel
