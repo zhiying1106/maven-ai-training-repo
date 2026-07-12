@@ -161,11 +161,9 @@ This is the "personal data" RAG source, and it plays the role of ground truth fo
 
 ## Task 4: Building an End-to-End Agentic RAG Prototype
 
-🔲 **TODO — fill in once built:**
-
 1. Build the end-to-end prototype following the architecture above (LangGraph agent + Qdrant retrieval + Tavily tool + Next.js UI).
 2. Deploy to a public endpoint — recommend Vercel for the frontend/API routes given the Next.js choice above, or Render if a separate Python backend service is needed for the LangGraph agent.
-3. Record the public URL here: `[deployed link]`
+3. Record the public URL here: `https://certificatechallenge1-self.vercel.app/`
 
 ---
 
@@ -282,15 +280,19 @@ The two targeted questions show the clearest evidence — both moved from `exter
 
 ## Task 7: Next Steps
 
-🔲 **TODO — write after building and evaluating**, but a starting structure:
+### What to keep for Demo Day
 
-**What to keep for Demo Day:**
-- The core "why" + "what breaks if" dual-retrieval architecture (vector + graph), since it's the differentiator versus a plain RAG chatbot
-- The confidence-check/no-hallucination guardrail — likely to be the most memorable part of a live demo if you can show it correctly declining to answer on a genuinely undocumented commit
+- **The confidence-check/no-hallucination guardrail.** This is the single most demo-worthy behavior in the system, and it's not a hunch — it's the only part of the eval that scored perfectly and consistently: all three genuine negative-control questions hit 10/10 on both correctness and hallucination-guard, in every run (Task 5.2, note 1). Every other component's score moved around between runs (router luck, judge variance); this one didn't. For a live demo, "watch it correctly say *I don't know* to a question with no documented answer, instead of making something up" is a stronger, more trustworthy moment than any successful retrieval — it's the property that differentiates "agent I can put in front of an engineering team" from "chatbot that sounds confident either way."
+- **The router → retrieve/traverse/search → synthesize architecture itself**, not necessarily every path's current performance. Keeping the shape (classify intent, then pick the retrieval strategy that matches the question type) is right even though one branch — graph traversal — is currently the weakest-performing (see below). The architecture is what makes the "why" vs "what breaks if" distinction legible to a demo audience; the fix belongs inside the graph branch, not in the overall design.
+- **The "why" retrieval path (hybrid vector + BM25) as-is.** It's the best-validated part of the system by a wide margin — correctness 9.1/10, hallucination-guard 8.3/10, faithfulness 0.93 on n=15 (Task 5.3) — and Task 6.2's dense-vs-hybrid comparison, once router noise and judge variance are controlled for, shows the two retrieval modes are within noise of each other on this corpus. There's no evidence-backed reason to touch this path before Demo Day; effort is better spent on the paths that are actually underperforming.
 
-**What to change or improve:**
-- Ingestion breadth — likely worth adding Teams thread ingestion if time allows, since a meaningful share of real "why" context lives there, not just in git/tickets
-- Freshness loop — a webhook-triggered incremental update (rather than a one-time ingestion) would make the "living" claim concrete rather than aspirational, and is worth prioritizing before Demo Day if the eval numbers show retrieval quality is otherwise solid
+### What to change or improve
 
-**Reasoning:** *(add your own — this is meant to be a genuine reflection graded on your reasoning, not the specific answer)*
+- **Graph traversal for "what breaks if" questions.** This is the most evidence-backed item on this list, not a guess: "what-breaks" questions scored worst of the three query types (correctness 7.2/10, hallucination-guard 5.8/10, faithfulness 0.66 — Task 5.3), and the most plausible code-grounded explanation is that `node_graph_traverse` merges BM25 seeds with up to 10 BFS-expanded graph neighbors versus the 8-chunk cap on the "why" path, and several answers were marked down for "adding unsupported specifics" — a wider candidate net pulling in tangential neighbors a strict judge penalizes. Before Demo Day I'd tighten the neighbor cap (or add a relevance filter on BFS-expanded nodes before they reach synthesis) and re-run just the "what-breaks" subset to confirm the fix, rather than re-running the full 30-question harness for a targeted change.
+- **The router's classification boundary — partially fixed, worth continued attention.** Task 6.3 already fixed the concrete bug (internal questions phrased generically were misrouted to `external`) by adding few-shot boundary examples and setting `temperature=0` on the router call, and it measurably worked (both targeted questions moved from ~2/10 to ~8/10, aggregate scores improved on 5 of 6 metrics). I'd keep this fix, but I would not consider the router "solved" — it was tuned against two known failure cases, not validated against a broader adversarial set, so I'd want a few more boundary-phrasing questions in the eval set specifically targeting this ambiguity before trusting it in front of an audience live.
+- **Eval rubric wording, independent of the system itself.** Self-review found that three of my own negative-control questions' `expected_answer_summary` text reads to an LLM judge as "the correct answer is a refusal," when the actually-correct behavior is a well-cited `[EXTERNAL]` answer (Task 5.2, note 3) — this artificially depresses the aggregate hallucination-guard score by roughly 3 questions' worth of near-zero scores despite the system behaving correctly in all three cases. This doesn't affect what ships to Demo Day, but I'd fix the dataset before quoting these numbers again, since right now the aggregate metric understates how well the system actually performs.
+
+### Reasoning
+
+The guardrail and the "why" path earned their place on the "keep" list because they're the only components with clean, repeated, low-variance evidence behind them (Task 5.3's note that "no single-run delta under ~2 points should be trusted" cuts both ways — it means I should be equally suspicious of a component that *looks* fine on one run, and equally confident about one that's fine across every run). The three "change" items earned their place the same way, in reverse, but at different confidence levels. Graph traversal is the strongest case: a specific, code-grounded, judge-confirmed failure mode (over-wide BFS expansion) with a targeted fix and a cheap way to verify it. The router boundary fix is real and measured — both targeted questions moved from ~2/10 to ~8/10 — but I'm deliberately framing it as "partially fixed" rather than "done," since it was tuned against two known failure cases, not stress-tested against a broader adversarial set; overclaiming a fix I haven't fully validated would be worse than flagging it as still-open. The eval rubric wording issue is the odd one out — it's not a system bug at all, just a flaw in my own test data — but I'm including it because right now it's actively understating how well the guardrail and routing actually perform, and it's the cheapest, lowest-risk fix on this list. I'm deliberately not listing "improve the LLM-as-judge scoring" as a fix, even though Task 6.2 and 6.3 both surfaced meaningful single-question score swings from judge variance alone — a single judge pass per question at n=30 is a known, acceptable limitation for a certification-scale eval, and chasing it down (e.g. multiple judge samples, majority vote) would cost more time than it would buy trust for a Demo Day audience.
 
