@@ -64,16 +64,22 @@ The `a2a/` mini-project starts a local HTTP server on port 9999. Nothing leaves 
 In `01_Cat_Health_Agent_Guardrails.ipynb`, input rails run in a specific order: deterministic checks (emergency, injection, PII) first, then the model-based topical guard. Why is that ordering important in production — and why do the rails return decisions like `escalate`, `block`, and `rewrite` instead of a simple boolean pass/fail?
 
 #### ✅ Answer
-
-_(insert your answer here)_
+- Cost and latency — the deterministic checks (regex/pattern matches for emergency, injection, PII) are free and instant, while the topical guard is a model call. Ordering cheap-and-fast before expensive-and-slow means most requests are filtered before you ever pay for a model round-trip.
+- Fail-safe short-circuiting — emergency and injection matches must escalate/block immediately, before any model involvement, so a prompt-injection attempt or a "my cat is seizing" message never even reaches the LLM where it could be reasoned about, argued with, or (in the injection case) followed.
+- PII must be scrubbed before the topical guard runs — since the topical guard is itself a model call, any PII in the input would otherwise be sent to that model too. Redacting first means contact details never appear in any model context, logs, or traces, no matter which rail sees the text next.
+- Boolean pass/fail can't express what needs to happen next — a true/false verdict tells you that something's wrong but not what to do about it. block (refuse safely), escalate (short-circuit to an urgent redirect), and rewrite (repair and continue) are three different control-flow branches, and only rewrite should let execution proceed to the model.
+- Emergency handling isn't a safety block, it's a routing decision — a cat mid-seizure doesn't need refusal, it needs redirection to a vet now. Collapsing that into "fail" would either wrongly block a legitimate, urgent user or wrongly let it through to get a leisurely chatbot answer — escalate is a distinct outcome because the right response isn't "no," it's "not here."
 
 ### ❓ Question #2
 
 In `02_Cat_Health_Agent_Caching.ipynb`, a semantic cache can serve a paraphrased FAQ for the price of one embedding call — but the notebook also shows how a one-word difference (treat vs. poison) can produce a catastrophic cache hit. Why can't you fix this with a better similarity threshold alone, and what should a production health agent do instead for high-stakes queries?
 
 #### ✅ Answer
-
-_(insert your answer here)_
+- Embeddings measure surface similarity, not stakes — cosine similarity captures "these sentences look alike," not "the consequences of confusing them are catastrophic." A poisoning question and a feeding question can legitimately sit close together in embedding space because they share almost all their words and structure.
+- Any single threshold has a counterexample — push the threshold up to separate chocolate-poisoning from chicken-treats, and you lose real paraphrases elsewhere; leave it lower and some critically different pair (like this one) will always sit just above the cutoff. There's no value that makes similarity and safety coincide for every query.
+- A cache hit is presented with false confidence — a bad cache hit doesn't just risk being wrong, it's wrong faster and more confidently than a live model call would have been, since there's no generation step where the model might notice the danger.
+- The fix is routing, not tuning — high-stakes queries must bypass the cache entirely rather than be filtered by similarity score. The notebook reuses the deterministic emergency rail from notebook 1: if run_input_rails returns escalate, the query never consults or populates the semantic cache.
+- Guardrails and caching aren't separate systems — the rails are what decide what's safe to cache in the first place. A production agent should treat "is this cacheable" as a guardrail decision made before the cache layer, not a property inferred from the query's embedding.
 
 ## Submitting Your Homework
 
