@@ -37,7 +37,7 @@ Repo root for all code paths below: `The-AI-Engineering-Certification-v1.0/Certi
 | 6 | Before/after performance table | 2 | Task 6 S2 | eval/results_dense_20260712_145011.json vs eval/results_hybrid_20260712_144326.json, `REPOMIND_RETRIEVAL_MODE` in rag/agent.py:184 | ✅ |
 | 6 | Second improvement, evidenced by harness | 6 | Task 6 S3 | rag/agent.py:147 (node_router prompt fix), rag/agent.py:90-176 (`_chat` temperature param, temperature=0 on router call); eval/results_hybrid_20260712_151159.json before/after | ✅ |
 | 7 | Keep/change reflection for Demo Day | 2 | Task 7 | n/a -- writing only | ✅ |
-| Final | Loom demo video <=10 min | 10 | n/a | external link -- not present in repo | ✅ |
+| Final | Loom demo video <=10 min | 10 | n/a | https://1drv.ms/v/c/e354b6609c61197c/IQB4ugfzmlJyT70Wybj5SLRRAUvyjUT4avOOW0zodTEfjXE?e=aPfN1T | ✅ |
 | Final | Written document addressing each deliverable | 10 | this document | n/a | ✅ (this file) |
 | Final | All relevant code in public repo | 0 | n/a | repomind/ (this repo), pushed to `github.com/zhiying1106/maven-ai-training-repo` | ✅ |
 
